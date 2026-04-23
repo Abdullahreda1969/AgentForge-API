@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+venv/
+env/
+.env
+ENV/
+
+# Project specific
+projects/*.zip
+*.log
+*.db
+*.sqlite3
+
+# API keys
+.env.local
+.secrets
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

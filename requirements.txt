@@ -1,0 +1,5 @@
+streamlit
+fastapi
+uvicorn
+python-multipart
+pydantic

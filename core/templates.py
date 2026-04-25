@@ -17,55 +17,118 @@ DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 '''
     
     @staticmethod
-    def database():
+    def get_database_template():
+        """قالب database.py - SQLite (تخزين دائم)"""
+        
         return '''# database.py
-# Simple in-memory storage (no SQLAlchemy)
-_items = []
-_next_id = 1
+import os
+import sqlite3
+from datetime import datetime
+from typing import List, Dict, Any
 
-def get_all():
-    return _items
+DB_PATH = os.getenv("DATABASE_PATH", "app.db")
 
-def add(item_data):
-    global _next_id
-    item_data["id"] = _next_id
-    _items.append(item_data)
-    _next_id += 1
-    return item_data
+def get_db_connection():
+    """إنشاء اتصال بقاعدة البيانات"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-def delete(item_id):
-    global _items
-    _items = [i for i in _items if i.get("id") != item_id]
+def init_db():
+    """تهيئة قاعدة البيانات وإنشاء الجداول"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    conn.commit()
+    conn.close()
+
+# تهيئة قاعدة البيانات عند بدء التطبيق
+init_db()
+
+def get_all_items() -> List[Dict[str, Any]]:
+    """جلب جميع العناصر"""
+    conn = get_db_connection()
+    items = conn.execute("SELECT * FROM items ORDER BY id DESC").fetchall()
+    conn.close()
+    return [dict(item) for item in items]
+
+def get_item_by_id(item_id: int) -> Dict[str, Any]:
+    """جلب عنصر محدد بالمعرف"""
+    conn = get_db_connection()
+    item = conn.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
+    conn.close()
+    return dict(item) if item else None
+
+def add_item(name: str, description: str = "") -> Dict[str, Any]:
+    """إضافة عنصر جديد"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO items (name, description) VALUES (?, ?)",
+        (name, description)
+    )
+    conn.commit()
+    item_id = cursor.lastrowid
+    conn.close()
+    return get_item_by_id(item_id)
+
+def update_item(item_id: int, **kwargs) -> bool:
+    """تحديث عنصر"""
+    conn = get_db_connection()
+    updates = ", ".join([f"{key} = ?" for key in kwargs.keys()])
+    values = list(kwargs.values()) + [item_id]
+    
+    conn.execute(f"UPDATE items SET {updates} WHERE id = ?", values)
+    conn.commit()
+    conn.close()
+    return True
+
+def delete_item(item_id: int) -> bool:
+    """حذف عنصر"""
+    conn = get_db_connection()
+    conn.execute("DELETE FROM items WHERE id = ?", (item_id,))
+    conn.commit()
+    conn.close()
     return True
 '''
-    
+        
     @staticmethod
-    def helpers(project_type, item_name):
+    def get_helpers_template(project_type, item_name):
+        """قالب helpers.py - SQLite (تخزين دائم)"""
+        
         items_name = f"{item_name}s"
+        
         return f'''# helpers.py
-_items = []
-_next_id = 1
+from database import get_all_items, get_item_by_id, add_item, update_item, delete_item
 
 def get_{items_name}():
-    return _items
+    """جلب جميع {items_name}"""
+    return get_all_items()
 
 def get_{item_name}({item_name}_id):
-    for item in _items:
-        if item.get("id") == {item_name}_id:
-            return item
-    return None
+    """جلب {item_name} محدد"""
+    return get_item_by_id({item_name}_id)
 
 def add_{item_name}(name: str, description: str = ""):
-    global _next_id
-    item = {{"id": _next_id, "name": name, "description": description}}
-    _items.append(item)
-    _next_id += 1
-    return item
+    """إضافة {item_name} جديد"""
+    return add_item(name=name, description=description)
+
+def update_{item_name}({item_name}_id: int, **kwargs):
+    """تحديث {item_name}"""
+    return update_item({item_name}_id, **kwargs)
 
 def delete_{item_name}({item_name}_id):
-    global _items
-    _items = [i for i in _items if i.get("id") != {item_name}_id]
-    return True
+    """حذف {item_name}"""
+    return delete_item({item_name}_id)
 '''
     
     @staticmethod

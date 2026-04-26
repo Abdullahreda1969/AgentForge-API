@@ -17,7 +17,7 @@ DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 '''
     
     @staticmethod
-    def get_database_template():
+    def database():
         """قالب database.py - SQLite (تخزين دائم)"""
         
         return '''# database.py
@@ -102,7 +102,7 @@ def delete_item(item_id: int) -> bool:
 '''
         
     @staticmethod
-    def get_helpers_template(project_type, item_name):
+    def helpers(project_type, item_name):
         """قالب helpers.py - SQLite (تخزين دائم)"""
         
         items_name = f"{item_name}s"
@@ -192,3 +192,13 @@ st.caption("Powered by AgentForge")
         if any(w in desc for w in ['product', 'inventory', 'منتج', 'مخزون']):
             return "product", "product"
         return "general", "item"
+    @staticmethod
+    def detect_item_name(description, project_type):
+        """استخراج اسم العنصر"""
+        if project_type == "contact":
+            return "contact"
+        if project_type == "task":
+            return "task"
+        if project_type == "product":
+            return "product"
+        return "item"

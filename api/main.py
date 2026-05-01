@@ -10,6 +10,8 @@ from datetime import datetime
 from local.orchestrator import LocalOrchestrator
 from api.models import GenerateRequest, GenerateResponse, APIKeyRequest, APIKeyResponse, UsageStats
 from api.auth import generate_api_key, verify_api_key, record_usage, get_usage_stats
+from api.models import GenerateRequest, GenerateResponse, ProjectType
+
 
 # تهيئة التطبيق
 app = FastAPI(
@@ -89,10 +91,11 @@ async def generate_project(
     # تحديد اسم المشروع
     project_name = request.project_name or f"api_project_{user['email'].split('@')[0]}"
     project_name = project_name.replace(" ", "_")
-    
+    # ✅ تحديد نوع المشروع (من المستخدم أو كشف تلقائي)
+    used_type = request.project_type.value
     try:
         # توليد المشروع
-        result = orchestrator.generate(project_name, request.description)
+        result = orchestrator.generate(project_name, request.description,project_type=used_type)
         
         if result["status"] == "completed":
             # تسجيل الاستخدام
@@ -105,13 +108,16 @@ async def generate_project(
                 success=True,
                 project_id=project_name,
                 download_url=download_url,
-                message=f"Project '{project_name}' generated successfully"
+                message=f"Project '{project_name}' generated successfully",
+                used_type=used_type
+
             )
         else:
             return GenerateResponse(
                 success=False,
                 project_id=project_name,
-                message=f"Generation failed: {result.get('reason', 'Unknown error')}"
+                message=f"Generation failed: {result.get('reason', 'Unknown error')}",
+                used_type=used_type
             )
             
     except Exception as e:

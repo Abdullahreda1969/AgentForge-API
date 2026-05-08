@@ -1,61 +1,63 @@
-# cloud/orchestrator.py
+# cloud/orchestrator.py - نسخة بسيطة مع API Key
 import os
 import logging
-from core.templates import Templates
+import requests
+import json
+import re
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger("CloudOrchestrator")
 
 class CloudOrchestrator:
     def __init__(self):
-        self.templates = Templates()
-    
-    def generate(self, project_name, description, project_type="auto"):
-        """توليد مشروع جديد مع إمكانية تحديد النوع (النسخة السحابية)"""
-        logger.info(f"☁️ Cloud mode generating: {project_name} (type: {project_type})")
+        self.api_key = os.getenv("GEMINI_API_KEY")
+        self.model = "gemini-2.5-flash"
+        self.api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
         
-        # ✅ إذا كان المستخدم قد حدد نوع المشروع
-        if project_type != "auto" and project_type != "general":
-            # استخدام النوع المحدد مباشرة
-            actual_type = project_type
-            item_name = self._get_item_name_for_type(actual_type)
+        if self.api_key:
+            print(f"✅ API Key loaded: {self.api_key[:20]}...")
         else:
-            # كشف تلقائي من الوصف
-            actual_type, item_name = self.templates.detect_type(description)
+            print("❌ GEMINI_API_KEY not found in .env")
+    
+    def generate_ai(self, project_name, description):
+        if not self.api_key:
+            return {"status": "failed", "reason": "GEMINI_API_KEY not found"}
         
         project_path = os.path.join("projects", project_name)
         os.makedirs(project_path, exist_ok=True)
         
-        # اختيار القالب المناسب
-        if actual_type == "library":
-            helpers_content = self.templates.helpers_library()
-            main_content = self.templates.main_library()
-        else:
-            # القوالب العامة (task, contact, product)
-            helpers_content = self.templates.helpers(actual_type, item_name)
-            main_content = self.templates.main(actual_type, item_name)
+        prompt = f"""Create a Streamlit app for: {description}
+Project name: {project_name}
+
+Return ONLY valid JSON:
+{{"main.py": "import streamlit as st\\nst.title('{project_name}')", "helpers.py": "# helpers", "config.py": "# config", "database.py": "# database", "start_app.bat": "@echo off\\nstreamlit run main.py\\npause"}}
+"""
         
-        files = {
-            "config.py": self.templates.config(),
-            "database.py": self.templates.database(),
-            "helpers.py": helpers_content,
-            "main.py": main_content,
-            "start_app.bat": self.templates.start_bat()
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"temperature": 0.2, "maxOutputTokens": 2048}
         }
         
-        for filename, content in files.items():
-            with open(os.path.join(project_path, filename), "w", encoding="utf-8") as f:
-                f.write(content)
-        
-        return {"status": "completed", "path": project_path, "files": list(files.keys()), "type_used": actual_type}
-    
-    def _get_item_name_for_type(self, project_type):
-        """تحويل نوع المشروع إلى اسم العنصر"""
-        mapping = {
-            "task": "task",
-            "contact": "contact", 
-            "product": "product",
-            "library": "book",
-            "restaurant": "dish",
-            "hotel": "room"
-        }
-        return mapping.get(project_type, "item")
+        try:
+            response = requests.post(self.api_url, json=payload, timeout=60)
+            result = response.json()
+            
+            if "error" in result:
+                return {"status": "failed", "reason": result['error'].get('message')}
+            
+            if "candidates" in result:
+                text = result["candidates"][0]["content"]["parts"][0]["text"]
+                match = re.search(r'\{.*\}', text, re.DOTALL)
+                if match:
+                    files = json.loads(match.group())
+                    for filename, content in files.items():
+                        with open(os.path.join(project_path, filename), "w") as f:
+                            f.write(content)
+                    return {"status": "completed", "path": project_path, "files": list(files.keys())}
+            
+            return {"status": "failed", "reason": "No valid JSON"}
+            
+        except Exception as e:
+            return {"status": "failed", "reason": str(e)}

@@ -4,4 +4,5 @@ uvicorn
 python-multipart
 pydantic
 requests
+python-dotenv  # ← هذا مهم
 

@@ -1,0 +1,30 @@
+# diploi.yaml
+# AgentForge API - Production Configuration
+
+components:
+  # FastAPI Backend Component
+  - name: fastapi
+    type: fastapi
+    path: /
+    entrypoint: api.main:app
+    environment:
+      - name: GEMINI_API_KEY
+        value: AIzaSyBqsovd3Wt0bRIkezqsiRNgVIOQ60JaOgY # ⚠️ استبدل بمفتاحك الحقيقي
+      - name: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - name: ENVIRONMENT
+        value: production
+      - name: LOG_LEVEL
+        value: info
+
+  # Optional: Streamlit Frontend (if needed)
+  - name: streamlit-ui
+    type: python
+    path: /
+    command: streamlit run app.py --server.port 8501 --server.headless true
+    port: 8501
+    environment:
+      - name: ENVIRONMENT
+        value: production
+      - name: API_URL
+        value: https://my-dev--agentforge-f0bc.diploi.me

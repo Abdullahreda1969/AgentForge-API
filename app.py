@@ -25,13 +25,18 @@ with col1:
 with col2:
     project_type = st.selectbox(
         "Project Type (for Smart Templates only)",
-        options=["auto", "task", "contact", "product", "library"],
+        options=["auto", "task", "contact", "product", "library", "invoice", "appointment", "workout", "meal", "blog"],
         format_func=lambda x: {
             "auto": "🤖 Auto Detect",
             "task": "📝 Task Manager",
             "contact": "📞 Contact Book",
             "product": "📦 Inventory",
-            "library": "📚 Library Manager"
+            "library": "📚 Library Manager",
+            "invoice": "💰 Invoice System",
+            "appointment": "📅 Appointment Booking",
+            "workout": "🏋️ Workout Tracker",
+            "meal": "🍽️ Meal Tracker",
+            "blog": "📝 Blog Platform"
         }.get(x, x),
         help="Only used when Smart Templates is selected"
     )

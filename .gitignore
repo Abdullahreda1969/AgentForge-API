@@ -27,3 +27,14 @@ projects/*.zip
 # OS
 .DS_Store
 Thumbs.db
+
+# Service account keys (secret)
+*.json
+!requirements.txt
+!package.json*.json
+!requirements.json
+*.json
+!requirements.json
+
+# Credentials
+*.json

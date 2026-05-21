@@ -3,7 +3,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
@@ -79,7 +79,9 @@ async def create_api_key(request: APIKeyRequest):
 @app.post("/v1/generate", response_model=GenerateResponse)
 async def generate_project(
     request: GenerateRequest,
-    x_api_key: str = Header(...)
+    x_api_key: str = Header(...),
+    req: Request = None  # <-- هذا هو السطر الجديد
+
 ):
     """توليد مشروع جديد"""
     
@@ -102,12 +104,12 @@ async def generate_project(
             record_usage(x_api_key)
             
             # رابط التحميل
-            download_url = f"/download/{project_name}.zip"
+            full_download_url = str(req.base_url) + f"download/{project_name}.zip"
             
             return GenerateResponse(
                 success=True,
                 project_id=project_name,
-                download_url=download_url,
+                download_url=full_download_url,  # <-- هذا هو التعديل الأهم
                 message=f"Project '{project_name}' generated successfully",
                 used_type=used_type
 

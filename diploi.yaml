@@ -1,30 +1,52 @@
-# diploi.yaml
-# AgentForge API - Production Configuration
+diploiVersion: v1.0
+name: AgentForge
+description: >-
+  AI-powered application generator with a FastAPI backend and a Streamlit
+  frontend. Supports Smart Templates, Ollama AI, and Gemini AI engines.
 
 components:
-  # FastAPI Backend Component
-  - name: fastapi
-    type: fastapi
-    path: /
-    entrypoint: api.main:app
-    environment:
-      - name: GEMINI_API_KEY
-        value: AIzaSyBJjhigDYerIR6AviRR4vS8jgwub0UFFrA    # ⚠️ استبدل بمفتاحك الحقيقي
-      - name: GEMINI_MODEL
-        value: gemini-2.5-flash
-      - name: ENVIRONMENT
-        value: production
-      - name: LOG_LEVEL
-        value: info
+  - name: FastAPI
+    identifier: fastapi
+    folder: /
+    package: https://github.com/diploi/component-fastapi#v0.136.1
+    env:
+      include:
+        - name: PYTHON_VERSION
+          value: "3.11"
+        - name: GEMINI_MODEL
+          value: gemini-2.5-flash
+        - name: ENVIRONMENT
+          value: production
+        - name: LOG_LEVEL
+          value: info
+    containerCommands:
+      developmentStart: >-
+        uv run --with uvicorn uvicorn api.main:app --host 0.0.0.0 --port 8000
+        --reload --reload-dir api --reload-dir core --reload-dir local
+      productionStart: >-
+        uv run --with uvicorn uvicorn api.main:app --host 0.0.0.0 --port 8000
+        --proxy-headers
+    hosts:
+      - identifier: app
+        name: FastAPI
+        endpoint: true
+        port: 8000
 
-  # Optional: Streamlit Frontend (if needed)
-  - name: streamlit-ui
-    type: python
-    path: /
-    command: streamlit run app.py --server.port 8501 --server.headless true
-    port: 8501
-    environment:
-      - name: ENVIRONMENT
-        value: production
-      - name: API_URL
-        value: https://my-dev--agentforge-f0bc.diploi.me
+  - name: Python
+    identifier: streamlit
+    folder: /
+    package: https://github.com/diploi/component-python#v05.2026
+    env:
+      include:
+        - name: PYTHON_VERSION
+          value: "3.11"
+        - name: ENVIRONMENT
+          value: production
+    containerCommands:
+      developmentStart: uv run streamlit run app.py --server.port 8501 --server.headless true
+      productionStart: uv run --frozen streamlit run app.py --server.port 8501 --server.headless true
+    hosts:
+      - identifier: app
+        name: Streamlit UI
+        endpoint: true
+        port: 8501

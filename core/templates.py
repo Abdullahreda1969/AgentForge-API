@@ -751,58 +751,105 @@ class Templates:
         ''')
     
     @staticmethod
-    def _helpers_library():
-        return textwrap.dedent("""            # helpers.py - Library Manager
-            import sqlite3
+    def helpers_library():
+        return '''# helpers.py
+    import sqlite3
 
-            DB_PATH = "library.db"
+    DB_PATH = "library.db"
 
-            def get_db_connection():
-                conn = sqlite3.connect(DB_PATH)
-                conn.row_factory = sqlite3.Row
-                return conn
+    def get_db_connection():
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        return conn
 
-            def init_db():
-                conn = get_db_connection()
-                conn.execute('''
-                    CREATE TABLE IF NOT EXISTS books (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        title TEXT NOT NULL,
-                        author TEXT NOT NULL,
-                        year INTEGER,
-                        status TEXT DEFAULT 'available'
-                    )
-                ''')
-                conn.commit()
-                conn.close()
-
-            init_db()
-
-            def get_books():
-                conn = get_db_connection()
-                books = conn.execute("SELECT * FROM books ORDER BY id DESC").fetchall()
-                conn.close()
-                return [dict(b) for b in books]
-
-            def add_book(title, author, year=0):
-                conn = get_db_connection()
-                cursor = conn.cursor()
-                cursor.execute(
-                    "INSERT INTO books (title, author, year) VALUES (?, ?, ?)",
-                    (title, author, year)
-                )
-                conn.commit()
-                book_id = cursor.lastrowid
-                conn.close()
-                return {"id": book_id, "title": title, "author": author}
-
-            def delete_book(book_id):
-                conn = get_db_connection()
-                conn.execute("DELETE FROM books WHERE id = ?", (book_id,))
-                conn.commit()
-                conn.close()
-                return True
+    def init_db():
+        conn = get_db_connection()
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS books (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                author TEXT NOT NULL,
+                isbn TEXT,
+                year INTEGER,
+                publisher TEXT
+            )
         """)
+        conn.commit()
+        conn.close()
+
+    init_db()
+
+    def get_books():
+        conn = get_db_connection()
+        books = conn.execute("SELECT * FROM books ORDER BY id DESC").fetchall()
+        conn.close()
+        return [dict(book) for book in books]
+
+    def add_book(title, author, isbn="", year=0, publisher=""):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO books (title, author, isbn, year, publisher) VALUES (?, ?, ?, ?, ?)",
+            (title, author, isbn, year, publisher)
+        )
+        conn.commit()
+        book_id = cursor.lastrowid
+        conn.close()
+        return {"id": book_id, "title": title, "author": author}
+
+    def delete_book(book_id):
+        conn = get_db_connection()
+        conn.execute("DELETE FROM books WHERE id = ?", (book_id,))
+        conn.commit()
+        conn.close()
+        return True
+    '''
+
+@staticmethod
+def main_library():
+    return '''# main.py
+import streamlit as st
+import sys
+import os
+
+sys.path.insert(0, os.path.dirname(__file__))
+
+from helpers import get_books, add_book, delete_book
+
+st.set_page_config(page_title="📚 Library Manager", layout="wide")
+st.title("📚 Library Manager")
+
+with st.sidebar:
+    st.header("Add New Book")
+    with st.form("add_form"):
+        title = st.text_input("Title")
+        author = st.text_input("Author")
+        isbn = st.text_input("ISBN (optional)")
+        year = st.number_input("Year", min_value=0, max_value=2026, step=1)
+        publisher = st.text_input("Publisher (optional)")
+        submitted = st.form_submit_button("Add Book")
+        if submitted and title and author:
+            add_book(title, author, isbn, year, publisher)
+            st.success(f"Added: {title}")
+            st.rerun()
+
+st.header("Books List")
+books = get_books()
+if not books:
+    st.info("No books yet. Add one from the sidebar!")
+else:
+    for book in books:
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.write(f"**{book['title']}** - {book['author']}")
+            if book.get('year'):
+                st.caption(f"Year: {book['year']}")
+        with col2:
+            if st.button("Delete", key=book['id']):
+                delete_book(book['id'])
+                st.rerun()
+st.caption("Powered by AgentForge")
+'''
     
     @staticmethod
     def _main_library():

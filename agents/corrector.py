@@ -13,7 +13,20 @@ class CorrectorAgent:
 
     def __init__(self):
         self.fix_stats = {"fixed": 0, "failed": 0}
-
+    def fix_data_editor_selection(self, code: str) -> Tuple[str, bool]:
+        """إزالة selection_mode من st.data_editor (غير مدعوم)"""
+        lines = code.split('\n')
+        fixed = False
+        new_lines = []
+        
+        for line in lines:
+            if 'st.data_editor' in line and 'selection_mode' in line:
+                line = re.sub(r',\s*selection_mode\s*=\s*["\'][^"\']*["\']', '', line)
+                line = re.sub(r'selection_mode\s*=\s*["\'][^"\']*["\'],?\s*', '', line)
+                fixed = True
+            new_lines.append(line)
+        
+        return '\n'.join(new_lines), fixed
     def fix_button_inside_form(self, code: str) -> Tuple[str, bool]:
         """تصحيح: استبدال st.button داخل st.form بـ st.form_submit_button"""
         fixed = False
@@ -180,6 +193,11 @@ class CorrectorAgent:
         fixed_count = 0
         current_code = code
 
+        # إصلاح st.data_editor
+        current_code, fixed = self.fix_data_editor_selection(current_code)
+        if fixed:
+            fixed_count += 1
+        
         # إصلاح أخطاء أحرف الهروب
         current_code, fixed = self.fix_line_continuation_errors(current_code)
         if fixed:
